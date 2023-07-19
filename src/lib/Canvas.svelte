@@ -26,19 +26,6 @@
 		end: Vec2;
 	};
 
-	function min(a: number, b: number) {
-		return a < b ? a : b;
-	}
-
-	function constrain_val(val: Vec2, con: Vec2): Vec2 {
-		if (val.x < 0) val.x = 0;
-		if (val.y < 0) val.y = 0;
-
-		if (val.x > con.x) val.x = con.x;
-		if (val.y > con.y) val.y = con.y;
-		return val;
-	}
-
 	let chunk1: Chunk = {
 		coord: {
 			x: 100,
@@ -85,7 +72,7 @@
 
 	onMount(() => {
 		ctx = canv.getContext('2d') as CanvasRenderingContext2D;
-		chunk1.pixels.length = 1000;
+		chunk1.pixels.length = 100;
 		for (let i = 0; i < chunk1.pixels.length; i++) {
 			chunk1.pixels[i] = [];
 			chunk1.pixels[i].length = chunk1.pixels.length;
@@ -127,55 +114,15 @@
 			end: pixel_pos(chunk1, screen_size)
 		};
 
-		constrain_val(render_pixels.begin, {
-			x: chunk1.pixels.length,
-			y: chunk1.pixels.length
-		});
-		constrain_val(render_pixels.end, {
-			x: chunk1.pixels.length,
-			y: chunk1.pixels.length
-		});
-
-		// shit code
-		// if (zoom < 0.2) {
-		//     for (let i = render_pixels.begin.x % 3 == 0 ? render_pixels.begin.x : ((render_pixels.begin.x - 1) % 3 == 0 ? render_pixels.begin.x - 1 : render_pixels.begin.x - 2); i < min(chunk1.pixels.length, render_pixels.end.x + 1); i+=3) {
-		//         for (let j = render_pixels.begin.y % 3 == 0 ? render_pixels.begin.y : ((render_pixels.begin.y - 1) % 3 == 0 ? render_pixels.begin.y - 1 : render_pixels.begin.y - 2); j < min(chunk1.pixels.length, render_pixels.end.y + 1); j+=3) {
-		//             let cl = colord(chunk1.pixels[i][j].color)
-		//             for(let k = 0; k < 3; k++) {
-		//                 for(let l = 0; l < 3; l++) {
-		//                     cl.mix(chunk1.pixels[i + k][j + l].color)
-		//                 }
-		//             }
-		//             ctx.fillStyle = cl.toHex()
-		//             let pos = pixel_coord(chunk1, i, j);
-		//             ctx.fillRect(pos.x, pos.y, pixel_size * 3, pixel_size * 3);
-		//         }
-		//     }
-		// } else if (zoom < 0.3) {
-		//     for (let i = render_pixels.begin.x % 2 == 0 ? render_pixels.begin.x : render_pixels.begin.x - 1; i < min(chunk1.pixels.length, render_pixels.end.x + 1); i+=2) {
-		//         for (let j = render_pixels.begin.y % 2 == 0 ? render_pixels.begin.y : render_pixels.begin.y - 1; j < min(chunk1.pixels.length, render_pixels.end.y + 1); j+=2) {
-		//             let cl = colord(chunk1.pixels[i][j].color)
-		//             for(let k = 0; k < 2; k++) {
-		//                 for(let l = 0; l < 2; l++) {
-		//                     cl.mix(chunk1.pixels[i + k][j + l].color)
-		//                 }
-		//             }
-		//             ctx.fillStyle = cl.toHex()
-		//             let pos = pixel_coord(chunk1, i, j);
-		//             ctx.fillRect(pos.x, pos.y, pixel_size * 2, pixel_size * 2);
-		//         }
-		//     }
-		// } else
-
-		{
+		if(zoom < 0.2 || true) {
 			for (
-				let i = render_pixels.begin.x;
-				i < min(chunk1.pixels.length, render_pixels.end.x + 1);
+				let i = Math.max(0, render_pixels.begin.x);
+				i < Math.min(chunk1.pixels.length, render_pixels.end.x + 1);
 				i++
 			) {
 				for (
-					let j = render_pixels.begin.y;
-					j < min(chunk1.pixels.length, render_pixels.end.y + 1);
+					let j = Math.max(0, render_pixels.begin.y);
+					j < Math.min(chunk1.pixels.length, render_pixels.end.y + 1);
 					j++
 				) {
 					ctx.fillStyle = chunk1.pixels[i][j].color;
@@ -183,7 +130,9 @@
 					ctx.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 				}
 			}
-		}
+		} else {
+
+        }
 		requestAnimationFrame(draw);
 	}
 
