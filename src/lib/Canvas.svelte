@@ -1,33 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	// import { Vec } from 'Vec2d';
 	import { Vec } from 'ella-math';
-	// import uniqolor from 'uniqolor';
 
-	function rand_int(max: number) {
-		return Math.floor(Math.random() * max);
-	}
+	const pixel_size: number = 10;
+	let chunk1: Chunk;
 
-	const zero_vec: Vec = new Vec(0, 0)
-	// type Vec = {
-	// 	x: number;
-	// 	y: number;
-	// };
-	
+	const zero_vec: Vec = new Vec(0, 0);
+
 	type Pixel = {
 		color: string;
 
 		// author, timestamp
 	};
+	type Area = {
+		begin: Vec;
+		end: Vec;
+	};
 
 	class Chunk {
-		coord: Vec;
 		pixels: Pixel[][] = [];
 		canv_buff: HTMLCanvasElement;
 		context: CanvasRenderingContext2D;
 		size: Vec;
-		constructor(coord: Vec, size: Vec) {
-			this.coord = coord;
+		constructor(size: Vec) {
 			this.size = size;
 			this.pixels.length = size.x;
 			for (let i = 0; i < size.x; i++) {
@@ -39,7 +34,7 @@
 					};
 				}
 			}
-			this.canv_buff = document.createElement('canvas');
+			this.canv_buff = document.createElement('canvas'); // uses document
 			this.canv_buff.width = pixel_size * size.x;
 			this.canv_buff.height = pixel_size * size.y;
 
@@ -47,14 +42,7 @@
 		}
 	}
 
-	type Area = {
-		begin: Vec;
-		end: Vec;
-	};
-
-	const pixel_size: number = 25;
-	let chunk1: Chunk;
-	function pixel_coord(chunk: Chunk, idx: Vec): Vec {
+	function idx_to_world(idx: Vec): Vec {
 		return idx.mul(pixel_size);
 	}
 
@@ -62,8 +50,8 @@
 		return at.div(zoom).sub(pan_offset);
 	}
 
-	function pixel_pos(chunk: Chunk, at: Vec): Vec {
-		const pos: Vec = screen_to_world(at).sub(chunk.coord).div(pixel_size);
+	function screen_to_idx(at: Vec): Vec {
+		const pos: Vec = screen_to_world(at).div(pixel_size);
 		return new Vec(Math.floor(pos.x), Math.floor(pos.y));
 	}
 
@@ -75,7 +63,6 @@
 
 	let pan_offset: Vec = zero_vec;
 	let screen_size: Vec = zero_vec;
-	let screen_center: Vec = zero_vec;
 
 	let zoom: number = 1;
 	let old_zoom: number = 1;
@@ -83,18 +70,12 @@
 
 	onMount(() => {
 		ctx = canv.getContext('2d') as CanvasRenderingContext2D;
-		let px_count = 655;
-		chunk1 = new Chunk(zero_vec, new Vec(px_count, px_count));
+		let px_count = 1000;
+		chunk1 = new Chunk(new Vec(px_count, px_count));
 		for (let i = 0; i < chunk1.pixels.length; i++) {
 			for (let j = 0; j < chunk1.pixels.length; j++) {
 				chunk1.pixels[i][j] = {
-					color: "black"
-					// color: `#${rand_int(256 * 256 * 255).toString(16)}`
-					// color: `#${(i + j) % 100}${j % 100}${(i + j) % 100}`
-					// color: uniqolor.random({
-					// 	saturation: 50,
-					// 	lightness: [40, 60]
-					// }).color
+					color: 'black'
 				};
 			}
 		}
@@ -105,13 +86,11 @@
 	let drawing: boolean = true;
 
 	function draw() {
-		screen_size = new Vec(canv.width = window.innerWidth, canv.height = window.innerHeight);
-		screen_center = screen_size.div(2);
+		screen_size = new Vec((canv.width = window.innerWidth), (canv.height = window.innerHeight));
 
 		ctx.scale(zoom, zoom);
 
 		pan_offset = pan_offset.sub(mousepos.div(old_zoom).sub(mousepos.div(zoom)));
-		// pan_offset = pan_offset.sub(mousepos.mul((zoom - old_zoom) / zoom * old_zoom));
 		ctx.translate(pan_offset.x, pan_offset.y);
 		old_zoom = zoom;
 		// ctx.clearRect(0, 0, screen_size.x, screen_size.y);
@@ -123,17 +102,17 @@
 
 		if (drawing) {
 			drawing = false;
-			
+
 			for (let i = 0; i < chunk1.pixels.length; i++) {
 				for (let j = 0; j < chunk1.pixels.length; j++) {
 					chunk1.context.fillStyle = chunk1.pixels[i][j].color;
-					let pos = pixel_coord(chunk1, new Vec(i, j));
+					let pos = idx_to_world(new Vec(i, j));
 					chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 				}
 			}
 		}
 
-		ctx.drawImage(chunk1.canv_buff, chunk1.coord.x, chunk1.coord.y);
+		ctx.drawImage(chunk1.canv_buff, 0, 0);
 		requestAnimationFrame(draw);
 	}
 
@@ -141,8 +120,8 @@
 		mousepos = new Vec(e.clientX, e.clientY);
 
 		if (is_dragging) {
-			pan_offset = pan_offset.add(new Vec(e.movementX, e.movementY).div(zoom))
-			
+			pan_offset = pan_offset.add(new Vec(e.movementX, e.movementY).div(zoom));
+
 			was_dragging = true;
 		}
 	}
@@ -152,7 +131,7 @@
 			was_dragging = false;
 			return;
 		}
-		let pos: Vec = pixel_pos(chunk1, new Vec(e.clientX, e.clientY));
+		let pos: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
 
 		console.log(pos);
 		console.log(chunk1.pixels[pos.x][pos.y].color);
@@ -176,7 +155,10 @@
 
 		if (zoom + inc <= lower_lim) {
 			zoom = lower_lim;
-			pan_offset = screen_to_world(screen_size).sub(screen_to_world(zero_vec)).div(2).sub(chunk1.size.mul(pixel_size / 2));
+			pan_offset = screen_to_world(screen_size)
+				.sub(screen_to_world(zero_vec))
+				.div(2)
+				.sub(chunk1.size.mul(pixel_size / 2));
 		} else if (zoom + inc >= upper_lim) zoom = upper_lim;
 		else zoom += inc;
 	}
@@ -187,10 +169,10 @@
 			was_dragging = false;
 			return;
 		}
-		let pixel: Vec = pixel_pos(chunk1, new Vec(e.clientX, e.clientY));
+		let pixel: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
 		chunk1.pixels[pixel.x][pixel.y].color = 'red';
 		chunk1.context.fillStyle = chunk1.pixels[pixel.x][pixel.y].color;
-		let pos = pixel_coord(chunk1, pixel);
+		let pos = idx_to_world(pixel);
 		chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 	}
 </script>
