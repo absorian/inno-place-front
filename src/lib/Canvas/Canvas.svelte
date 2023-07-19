@@ -1,22 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Vec } from 'ella-math';
+	
+	import type { Pixel } from '.';
 
-	export let pixel_size: number = 10;
 	export let pixels: Pixel[][] = [];
 	export let selected_color: string = "red";
+	export let pixel_size: number = 10;
 
 	const zero_vec: Vec = new Vec(0, 0);
-
-	type Pixel = {
-		color: string;
-
-		// author, timestamp
-	};
-	type Area = {
-		begin: Vec;
-		end: Vec;
-	};
 
 	function idx_to_world(idx: Vec): Vec {
 		return idx.mul(pixel_size);
