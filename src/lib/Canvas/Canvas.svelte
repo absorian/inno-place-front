@@ -43,8 +43,8 @@
 	onMount(() => {
 		ctx = canv.getContext('2d') as CanvasRenderingContext2D;
 
-		pixels_count = new Vec(pixels.length)
-		canv_buf = document.createElement('canvas'); // uses document
+		pixels_count = new Vec(pixels.length, pixels.length)
+		canv_buf = document.createElement('canvas');
 		canv_buf.width = pixel_size * pixels_count.x;
 		canv_buf.height = pixel_size * pixels_count.y;
 
