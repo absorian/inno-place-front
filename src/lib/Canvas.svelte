@@ -1,40 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	// import { Vec } from 'Vec2d';
+	import { Vec } from 'ella-math';
 	// import uniqolor from 'uniqolor';
 
 	function rand_int(max: number) {
 		return Math.floor(Math.random() * max);
 	}
 
-	type Vec2 = {
-		x: number;
-		y: number;
-	};
-
-	function add_vec(a: Vec2, b: Vec2) {
-		return {
-			x: a.x + b.x,
-			y: a.y + b.y
-		};
-	}
-	function sub_vec(a: Vec2, b: Vec2) {
-		return {
-			x: a.x - b.x,
-			y: a.y - b.y
-		};
-	}
-	function scale_vec(a: Vec2, mul: number) {
-		return {
-			x: a.x * mul,
-			y: a.y * mul
-		};
-	}
-
-	const zero_vec: Vec2 = {
-		x: 0,
-		y: 0
-	};
-
+	const zero_vec: Vec = new Vec(0, 0)
+	// type Vec = {
+	// 	x: number;
+	// 	y: number;
+	// };
+	
 	type Pixel = {
 		color: string;
 
@@ -42,13 +21,14 @@
 	};
 
 	class Chunk {
-		coord: Vec2;
+		coord: Vec;
 		pixels: Pixel[][] = [];
 		canv_buff: HTMLCanvasElement;
 		context: CanvasRenderingContext2D;
-
-		constructor(coord: Vec2, size: Vec2) {
+		size: Vec;
+		constructor(coord: Vec, size: Vec) {
 			this.coord = coord;
+			this.size = size;
 			this.pixels.length = size.x;
 			for (let i = 0; i < size.x; i++) {
 				this.pixels[i] = [];
@@ -68,32 +48,23 @@
 	}
 
 	type Area = {
-		begin: Vec2;
-		end: Vec2;
+		begin: Vec;
+		end: Vec;
 	};
 
 	const pixel_size: number = 25;
 	let chunk1: Chunk;
-	function pixel_coord(chunk: Chunk, i: number, j: number): Vec2 {
-		return {
-			x: pixel_size * i,
-			y: pixel_size * j
-		};
+	function pixel_coord(chunk: Chunk, idx: Vec): Vec {
+		return idx.mul(pixel_size);
 	}
 
-	function screen_to_world(at: Vec2) {
-		return {
-			x: at.x / zoom - pan_offset.x,
-			y: at.y / zoom - pan_offset.y
-		};
+	function screen_to_world(at: Vec): Vec {
+		return at.div(zoom).sub(pan_offset);
 	}
 
-	function pixel_pos(chunk: Chunk, at: Vec2): Vec2 {
-		let pos: Vec2 = screen_to_world(at);
-		return {
-			x: Math.floor((pos.x - chunk.coord.x) / pixel_size),
-			y: Math.floor((pos.y - chunk.coord.y) / pixel_size)
-		};
+	function pixel_pos(chunk: Chunk, at: Vec): Vec {
+		const pos: Vec = screen_to_world(at).sub(chunk.coord).div(pixel_size);
+		return new Vec(Math.floor(pos.x), Math.floor(pos.y));
 	}
 
 	let canv: HTMLCanvasElement;
@@ -102,18 +73,18 @@
 	let is_dragging: boolean = false;
 	let was_dragging: boolean = false;
 
-	let pan_offset: Vec2 = zero_vec;
-	let screen_size: Vec2 = zero_vec;
-	let screen_center: Vec2 = zero_vec;
+	let pan_offset: Vec = zero_vec;
+	let screen_size: Vec = zero_vec;
+	let screen_center: Vec = zero_vec;
 
 	let zoom: number = 1;
 	let old_zoom: number = 1;
-	let mousepos: Vec2 = zero_vec;
+	let mousepos: Vec = zero_vec;
 
 	onMount(() => {
 		ctx = canv.getContext('2d') as CanvasRenderingContext2D;
 		let px_count = 655;
-		chunk1 = new Chunk({ x: 0, y: 0 }, { x: px_count, y: px_count });
+		chunk1 = new Chunk(zero_vec, new Vec(px_count, px_count));
 		for (let i = 0; i < chunk1.pixels.length; i++) {
 			for (let j = 0; j < chunk1.pixels.length; j++) {
 				chunk1.pixels[i][j] = {
@@ -134,21 +105,13 @@
 	let drawing: boolean = true;
 
 	function draw() {
-		screen_size = {
-			x: (canv.width = window.innerWidth),
-			y: (canv.height = window.innerHeight)
-		};
-		screen_center = {
-			x: screen_size.x / 2,
-			y: screen_size.y / 2
-		};
+		screen_size = new Vec(canv.width = window.innerWidth, canv.height = window.innerHeight);
+		screen_center = screen_size.div(2);
 
 		ctx.scale(zoom, zoom);
 
-		pan_offset = {
-			x: pan_offset.x - (mousepos.x / old_zoom - mousepos.x / zoom),
-			y: pan_offset.y - (mousepos.y / old_zoom - mousepos.y / zoom)
-		};
+		pan_offset = pan_offset.sub(mousepos.div(old_zoom).sub(mousepos.div(zoom)));
+		// pan_offset = pan_offset.sub(mousepos.mul((zoom - old_zoom) / zoom * old_zoom));
 		ctx.translate(pan_offset.x, pan_offset.y);
 		old_zoom = zoom;
 		// ctx.clearRect(0, 0, screen_size.x, screen_size.y);
@@ -164,7 +127,7 @@
 			for (let i = 0; i < chunk1.pixels.length; i++) {
 				for (let j = 0; j < chunk1.pixels.length; j++) {
 					chunk1.context.fillStyle = chunk1.pixels[i][j].color;
-					let pos = pixel_coord(chunk1, i, j);
+					let pos = pixel_coord(chunk1, new Vec(i, j));
 					chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 				}
 			}
@@ -175,15 +138,11 @@
 	}
 
 	function m_move(e: MouseEvent) {
-		mousepos = {
-			x: e.clientX,
-			y: e.clientY
-		};
+		mousepos = new Vec(e.clientX, e.clientY);
 
 		if (is_dragging) {
-			pan_offset.x += e.movementX / zoom;
-			pan_offset.y += e.movementY / zoom;
-
+			pan_offset = pan_offset.add(new Vec(e.movementX, e.movementY).div(zoom))
+			
 			was_dragging = true;
 		}
 	}
@@ -193,10 +152,7 @@
 			was_dragging = false;
 			return;
 		}
-		let pos: Vec2 = pixel_pos(chunk1, {
-			x: e.clientX,
-			y: e.clientY
-		});
+		let pos: Vec = pixel_pos(chunk1, new Vec(e.clientX, e.clientY));
 
 		console.log(pos);
 		console.log(chunk1.pixels[pos.x][pos.y].color);
@@ -212,7 +168,7 @@
 	}
 
 	function m_wheel(e: WheelEvent) {
-		let inc: number = -e.deltaY * 0.0005 * zoom;
+		let inc: number = -e.deltaY * 0.0003 * (zoom + 0.5);
 
 		const lower_lim =
 			Math.min(screen_size.x, screen_size.y) / (pixel_size * (chunk1.pixels.length + 10));
@@ -220,13 +176,9 @@
 
 		if (zoom + inc <= lower_lim) {
 			zoom = lower_lim;
-			pan_offset = sub_vec(
-				scale_vec(sub_vec(screen_to_world(screen_size), screen_to_world(zero_vec)), 0.5),
-				{ x: (pixel_size * chunk1.pixels.length) / 2, y: (pixel_size * chunk1.pixels.length) / 2 }
-			);
+			pan_offset = screen_to_world(screen_size).sub(screen_to_world(zero_vec)).div(2).sub(chunk1.size.mul(pixel_size / 2));
 		} else if (zoom + inc >= upper_lim) zoom = upper_lim;
 		else zoom += inc;
-		// console.log(zoom);
 	}
 
 	function put_color(e: MouseEvent) {
@@ -235,13 +187,10 @@
 			was_dragging = false;
 			return;
 		}
-		let pixel: Vec2 = pixel_pos(chunk1, {
-			x: e.clientX,
-			y: e.clientY
-		});
+		let pixel: Vec = pixel_pos(chunk1, new Vec(e.clientX, e.clientY));
 		chunk1.pixels[pixel.x][pixel.y].color = 'red';
 		chunk1.context.fillStyle = chunk1.pixels[pixel.x][pixel.y].color;
-		let pos = pixel_coord(chunk1, pixel.x, pixel.y);
+		let pos = pixel_coord(chunk1, pixel);
 		chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 	}
 </script>
