@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { Vec } from 'ella-math';
 
-	const pixel_size: number = 10;
-	let chunk1: Chunk;
+	export let pixel_size: number = 10;
+	export let pixels: Pixel[][] = [];
+	export let selected_color: string = "red";
 
 	const zero_vec: Vec = new Vec(0, 0);
 
@@ -16,31 +17,6 @@
 		begin: Vec;
 		end: Vec;
 	};
-
-	class Chunk {
-		pixels: Pixel[][] = [];
-		canv_buff: HTMLCanvasElement;
-		context: CanvasRenderingContext2D;
-		size: Vec;
-		constructor(size: Vec) {
-			this.size = size;
-			this.pixels.length = size.x;
-			for (let i = 0; i < size.x; i++) {
-				this.pixels[i] = [];
-				this.pixels[i].length = size.y;
-				for (let j = 0; j < size.y; j++) {
-					this.pixels[i][j] = {
-						color: ''
-					};
-				}
-			}
-			this.canv_buff = document.createElement('canvas'); // uses document
-			this.canv_buff.width = pixel_size * size.x;
-			this.canv_buff.height = pixel_size * size.y;
-
-			this.context = this.canv_buff.getContext('2d') as CanvasRenderingContext2D;
-		}
-	}
 
 	function idx_to_world(idx: Vec): Vec {
 		return idx.mul(pixel_size);
@@ -58,6 +34,10 @@
 	let canv: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 
+	let canv_buf: HTMLCanvasElement;
+	let ctx_buf: CanvasRenderingContext2D;
+	let pixels_count: Vec;
+
 	let is_dragging: boolean = false;
 	let was_dragging: boolean = false;
 
@@ -70,16 +50,14 @@
 
 	onMount(() => {
 		ctx = canv.getContext('2d') as CanvasRenderingContext2D;
-		let px_count = 1000;
-		chunk1 = new Chunk(new Vec(px_count, px_count));
-		for (let i = 0; i < chunk1.pixels.length; i++) {
-			for (let j = 0; j < chunk1.pixels.length; j++) {
-				chunk1.pixels[i][j] = {
-					color: 'black'
-				};
-			}
-		}
-		console.log('Beginning to render canvas');
+
+		pixels_count = new Vec(pixels.length)
+		canv_buf = document.createElement('canvas'); // uses document
+		canv_buf.width = pixel_size * pixels_count.x;
+		canv_buf.height = pixel_size * pixels_count.y;
+
+		ctx_buf = canv_buf.getContext('2d') as CanvasRenderingContext2D;
+
 		draw();
 	});
 
@@ -103,16 +81,16 @@
 		if (drawing) {
 			drawing = false;
 
-			for (let i = 0; i < chunk1.pixels.length; i++) {
-				for (let j = 0; j < chunk1.pixels.length; j++) {
-					chunk1.context.fillStyle = chunk1.pixels[i][j].color;
+			for (let i = 0; i < pixels.length; i++) {
+				for (let j = 0; j < pixels.length; j++) {
+					ctx_buf.fillStyle = pixels[i][j].color;
 					let pos = idx_to_world(new Vec(i, j));
-					chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
+					ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 				}
 			}
 		}
 
-		ctx.drawImage(chunk1.canv_buff, 0, 0);
+		ctx.drawImage(canv_buf, 0, 0);
 		requestAnimationFrame(draw);
 	}
 
@@ -134,11 +112,10 @@
 		let pos: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
 
 		console.log(pos);
-		console.log(chunk1.pixels[pos.x][pos.y].color);
+		console.log(pixels[pos.x][pos.y].color);
 	}
 
 	function m_down(e: MouseEvent) {
-		// if (e.button != 0) return; //
 		is_dragging = true;
 	}
 
@@ -150,7 +127,7 @@
 		let inc: number = -e.deltaY * 0.0003 * (zoom + 0.5);
 
 		const lower_lim =
-			Math.min(screen_size.x, screen_size.y) / (pixel_size * (chunk1.pixels.length + 10));
+			Math.min(screen_size.x, screen_size.y) / (pixel_size * (pixels_count.x + 10));
 		const upper_lim = 3;
 
 		if (zoom + inc <= lower_lim) {
@@ -158,22 +135,22 @@
 			pan_offset = screen_to_world(screen_size)
 				.sub(screen_to_world(zero_vec))
 				.div(2)
-				.sub(chunk1.size.mul(pixel_size / 2));
+				.sub(pixels_count.mul(pixel_size / 2));
 		} else if (zoom + inc >= upper_lim) zoom = upper_lim;
 		else zoom += inc;
 	}
 
 	function put_color(e: MouseEvent) {
 		if (was_dragging) {
-			//
 			was_dragging = false;
 			return;
 		}
 		let pixel: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
-		chunk1.pixels[pixel.x][pixel.y].color = 'red';
-		chunk1.context.fillStyle = chunk1.pixels[pixel.x][pixel.y].color;
+		
+		ctx_buf.fillStyle = pixels[pixel.x][pixel.y].color = selected_color;
+
 		let pos = idx_to_world(pixel);
-		chunk1.context.fillRect(pos.x, pos.y, pixel_size, pixel_size);
+		ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 	}
 </script>
 
