@@ -1,2 +1,2 @@
 export { Canvas } from "./Canvas"
-export type { Pixel, PutColorEvent } from "./Canvas"
+export type { Pixel, CanvasClickEvent, CanvasUpdateFunc } from "./Canvas"

@@ -1,4 +1,6 @@
 import Canvas from "./Canvas.svelte"
+export { Canvas }
+
 import type { Vec } from "ella-math"
 
 export interface Pixel {
@@ -8,8 +10,8 @@ export interface Pixel {
     timestamp: number
 };
 
-export interface PutColorEvent {
+export interface CanvasClickEvent {
     position: Vec,
 }
 
-export { Canvas }
+export type CanvasUpdateFunc = (x: number, y: number) => void;

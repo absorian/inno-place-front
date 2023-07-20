@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Canvas } from "$lib";
-	import type { Pixel, PutColorEvent } from "$lib";
+	import type { Pixel, CanvasClickEvent, CanvasUpdateFunc } from "$lib";
 
 	// demo
 	const arr_size: number = 1000;
 	let selected_color: string = "#aa55f1";
 
-	let canvas_update: (x: number, y: number) => void;
+	let canvas_update: CanvasUpdateFunc;
 	
 	let arr: Pixel[][] = []
 	arr.length = arr_size;
@@ -22,7 +22,7 @@
 		}
 	}
 
-	function canvas_click_cb(e: CustomEvent<PutColorEvent>) {
+	function canvas_click_cb(e: CustomEvent<CanvasClickEvent>) {
 		let pos = e.detail.position;
 		console.log(`Pixel is changed at: ${pos.toString()}`);
 		arr[pos.x][pos.y] = {

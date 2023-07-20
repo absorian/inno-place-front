@@ -2,12 +2,12 @@
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { Vec } from 'ella-math';
 	
-	import type { Pixel, PutColorEvent } from '.';
+	import type { Pixel, CanvasClickEvent, CanvasUpdateFunc } from '.';
 
 	export let pixels: Pixel[][] = [];
 	export let pixel_size: number = 10;
 
-	export const update = (x: number, y: number) => {
+	export const update: CanvasUpdateFunc = (x: number, y: number) => {
 		ctx_buf.fillStyle = pixels[x][y].color;
 		let pos = idx_to_world(new Vec(x, y));
 		ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
@@ -28,7 +28,7 @@
 		return new Vec(Math.floor(pos.x), Math.floor(pos.y));
 	}
 
-	const dispatch = createEventDispatcher<{click: PutColorEvent}>();
+	const dispatch = createEventDispatcher<{click: CanvasClickEvent}>();
 
 	let canv: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -140,7 +140,7 @@
 		else zoom += inc;
 	}
 
-	function put_color(e: MouseEvent) {
+	function m_context(e: MouseEvent) {
 		// if (was_dragging) {
 		// 	was_dragging = false;
 		// 	return;
@@ -159,7 +159,7 @@
 
 <canvas
 	bind:this={canv}
-	on:contextmenu|preventDefault={put_color}
+	on:contextmenu|preventDefault={m_context}
 	on:click={m_click}
 	on:mousemove={m_move}
 	on:mousedown={m_down}
