@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, createEventDispatcher } from 'svelte';
 	import { Vec } from 'ella-math';
 	
-	import type { Pixel } from '.';
+	import type { Pixel, PutColorEvent } from '.';
 
 	export let pixels: Pixel[][] = [];
 	export let selected_color: string = "red";
@@ -22,6 +22,8 @@
 		const pos: Vec = screen_to_world(at).div(pixel_size);
 		return new Vec(Math.floor(pos.x), Math.floor(pos.y));
 	}
+
+	const dispatch = createEventDispatcher<{putcolor: PutColorEvent}>();
 
 	let canv: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -108,6 +110,7 @@
 	}
 
 	function m_down(e: MouseEvent) {
+		if(e.button != 0) return;
 		is_dragging = true;
 	}
 
@@ -133,14 +136,18 @@
 	}
 
 	function put_color(e: MouseEvent) {
-		if (was_dragging) {
-			was_dragging = false;
-			return;
-		}
+		// if (was_dragging) {
+		// 	was_dragging = false;
+		// 	return;
+		// }
 		let pixel: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
-		
-		ctx_buf.fillStyle = pixels[pixel.x][pixel.y].color = selected_color;
+		if (pixel.x < 0 || pixel.y < 0) return;
 
+		dispatch("putcolor", {
+			position: pixel,
+			color: selected_color
+		});
+		ctx_buf.fillStyle = pixels[pixel.x][pixel.y].color = selected_color;
 		let pos = idx_to_world(pixel);
 		ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 	}
