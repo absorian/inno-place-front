@@ -142,6 +142,7 @@
 		// }
 		let pixel: Vec = screen_to_idx(new Vec(e.clientX, e.clientY));
 		if (pixel.x < 0 || pixel.y < 0) return;
+		if (pixel.x >= pixels_count.x || pixel.y >= pixels_count.y) return;
 
 		dispatch("putcolor", {
 			position: pixel,
