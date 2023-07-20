@@ -5,8 +5,13 @@
 	import type { Pixel, PutColorEvent } from '.';
 
 	export let pixels: Pixel[][] = [];
-	export let selected_color: string = "red";
 	export let pixel_size: number = 10;
+
+	export const update = (x: number, y: number) => {
+		ctx_buf.fillStyle = pixels[x][y].color;
+		let pos = idx_to_world(new Vec(x, y));
+		ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
+	}
 
 	const zero_vec: Vec = new Vec(0, 0);
 
@@ -23,7 +28,7 @@
 		return new Vec(Math.floor(pos.x), Math.floor(pos.y));
 	}
 
-	const dispatch = createEventDispatcher<{putcolor: PutColorEvent}>();
+	const dispatch = createEventDispatcher<{click: PutColorEvent}>();
 
 	let canv: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
@@ -144,13 +149,9 @@
 		if (pixel.x < 0 || pixel.y < 0) return;
 		if (pixel.x >= pixels_count.x || pixel.y >= pixels_count.y) return;
 
-		dispatch("putcolor", {
+		dispatch("click", {
 			position: pixel,
-			color: selected_color
 		});
-		ctx_buf.fillStyle = pixels[pixel.x][pixel.y].color = selected_color;
-		let pos = idx_to_world(pixel);
-		ctx_buf.fillRect(pos.x, pos.y, pixel_size, pixel_size);
 	}
 </script>
 
